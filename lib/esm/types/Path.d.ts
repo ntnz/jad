@@ -8,30 +8,21 @@ export interface Coordinates {
         y: number;
     };
 }
-declare enum Unit {
-    Mm = "MILLIMETERS",
-    Cm = "CENTIMETERS",
-    M = "METERS",
-    Px = "PIXELS"
-}
 export interface PathConfig {
-    canvas: HTMLCanvasElement;
+    container: HTMLElement;
     ctx: CanvasRenderingContext2D;
-    onUpdate: Function | undefined;
-    coordinates: Coordinates | undefined;
-    pxPerUnit: number;
-    unit: Unit;
     active: boolean;
-    lineCap: CanvasLineCap | undefined;
     lineWidth: number;
     color: string;
+    onUpdate: Function | undefined;
+    coordinates: Coordinates | undefined;
+    lineCap: CanvasLineCap | undefined;
 }
 export declare class Path {
+    container: HTMLElement;
     canvas: HTMLCanvasElement;
     ctx: CanvasRenderingContext2D;
     onUpdate: Function | undefined;
-    pxPerUnit: number;
-    unit: Unit;
     active: boolean;
     lineCap: CanvasLineCap;
     lineWidth: number;
@@ -42,8 +33,10 @@ export declare class Path {
     bPointXPx: number;
     bPointYPx: number;
     get coordinates(): Coordinates;
-    get unitQuantity(): number;
+    get length(): number;
     constructor(config: PathConfig);
+    destroy(): void;
+    private _initCanvas;
     private _initCtx;
     private _onMouseDown;
     private _onMouseUp;
@@ -51,5 +44,4 @@ export declare class Path {
     private _draw;
     private _getMousePosition;
 }
-export {};
 //# sourceMappingURL=Path.d.ts.map

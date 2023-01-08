@@ -11,32 +11,22 @@ export interface Coordinates {
   };
 }
 
-enum Unit {
-  Mm = "MILLIMETERS",
-  Cm = "CENTIMETERS",
-  M = "METERS",
-  Px = "PIXELS",
-}
-
 export interface PathConfig {
-  canvas: HTMLCanvasElement;
+  container: HTMLElement;
   ctx: CanvasRenderingContext2D;
-  onUpdate: Function | undefined;
-  coordinates: Coordinates | undefined;
-  pxPerUnit: number;
-  unit: Unit;
   active: boolean;
-  lineCap: CanvasLineCap | undefined;
   lineWidth: number;
   color: string;
+  onUpdate: Function | undefined;
+  coordinates: Coordinates | undefined;
+  lineCap: CanvasLineCap | undefined;
 }
 
 export class Path {
+  container: HTMLElement;
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   onUpdate: Function | undefined;
-  pxPerUnit: number = 1; // maybe don't default to 1
-  unit: Unit = Unit.Px; // with px it's 1 to 1
   active: boolean;
   lineCap: CanvasLineCap = "round";
   lineWidth = 10;
@@ -62,41 +52,59 @@ export class Path {
     };
   }
 
-  get unitQuantity(): number {
-    return (
-      getDistanceBetweenTwoPoints(
-        this.aPointXPx,
-        this.aPointYPx,
-        this.bPointXPx,
-        this.bPointYPx
-      ) / this.pxPerUnit
+  get length(): number {
+    return getDistanceBetweenTwoPoints(
+      this.aPointXPx,
+      this.aPointYPx,
+      this.bPointXPx,
+      this.bPointYPx
     );
   }
 
   constructor(config: PathConfig) {
-    this.canvas = config.canvas;
+    this.container = config.container;
     this.active = config.active;
     this.onUpdate = config.onUpdate;
 
-    if (config.unit !== undefined) this.unit = config.unit;
-    if (config.pxPerUnit !== undefined) this.pxPerUnit = config.pxPerUnit;
     if (config.lineCap !== undefined) this.lineCap = config.lineCap;
     if (config.lineWidth !== undefined) this.lineWidth = config.lineWidth;
     if (config.color !== undefined) this.color = config.color;
 
     // create the 2d context
-    this.ctx = this._initCtx(config.coordinates);
+    this.canvas = this._initCanvas(config.container);
+    this.ctx = this._initCtx(this.canvas, config.coordinates);
 
     // hookup the event listeners
-    this.canvas.addEventListener("mousedown", this._onMouseDown.bind(this));
-    this.canvas.addEventListener("mouseup", this._onMouseUp.bind(this));
-    this.canvas.addEventListener("mousemove", this._onMouseMove.bind(this));
+    this._onMouseDown = this._onMouseDown.bind(this);
+    this._onMouseUp = this._onMouseUp.bind(this);
+    this._onMouseMove = this._onMouseMove.bind(this);
+    this.container.addEventListener("mousedown", this._onMouseDown);
+    this.container.addEventListener("mouseup", this._onMouseUp);
+    this.container.addEventListener("mousemove", this._onMouseMove);
+  }
+
+  destroy(): void {
+    this.container.removeChild(this.canvas);
+    this.container.removeEventListener("mousedown", this._onMouseDown);
+    this.container.removeEventListener("mouseup", this._onMouseUp);
+    this.container.removeEventListener("mousemove", this._onMouseMove);
+  }
+
+  private _initCanvas(container: HTMLElement): HTMLCanvasElement {
+    const canvas = document.createElement("canvas");
+    canvas.style.position = "absolute";
+    canvas.width = container.offsetWidth;
+    canvas.height = container.offsetHeight;
+    container.appendChild(canvas);
+
+    return canvas;
   }
 
   private _initCtx(
+    canvas: HTMLCanvasElement,
     coordinates: Coordinates | undefined
   ): CanvasRenderingContext2D {
-    const ctx = this.canvas.getContext("2d");
+    const ctx = canvas.getContext("2d");
     if (ctx === null)
       throw new Error("Failed to get 2d context on provided canvas");
 
@@ -139,7 +147,7 @@ export class Path {
     this.drawing = false;
 
     if (this.onUpdate !== undefined)
-      this.onUpdate(this.coordinates, this.unitQuantity);
+      this.onUpdate(this.coordinates, this.length);
   }
 
   private _onMouseMove(e: MouseEvent): void {
